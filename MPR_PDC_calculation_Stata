@@ -26,7 +26,7 @@ Updated: 2 April 2016
 
 ******** Description of the variables
 /* 
-id 				patient identifier
+id 			patient identifier
 drug			medication
 datefilled		date medicaiton was filled
 dayssuply		day supply of medication
