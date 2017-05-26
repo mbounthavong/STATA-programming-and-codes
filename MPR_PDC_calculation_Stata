@@ -1,0 +1,157 @@
+********************************************************************************
+* Template: MPR and PDC calculations version 1.0
+* Programmer: Mark Bounthavong
+* Date developed: 01 April 2016
+* Correspondence: mbounth@uw.edu
+********************************************************************************
+/*
+Make sure that you're data set is properly prepared for these analyses. 
+Adapted from Leslie, et al:
+http://www.wuss.org/proceedings08/08WUSS%20Proceedings/papers/anl/anl09.pdf
+
+This MPR and PDC calculator do not take into account combination drugs. 
+
+This is useful for drugs used as monotherapy. 
+
+The starting data structure is in the long format. 
+
+If you identify any errors, please contact Mark Bounthavong at mbounth@uw.edu
+
+Updated: 2 April 2016
+*/
+
+********************************************************************************
+* MPR Calculation
+********************************************************************************
+
+******** Description of the variables
+/* 
+id 				patient identifier
+drug			medication
+datefilled		date medicaiton was filled
+dayssuply		day supply of medication
+ttdaysup		total day supply
+*/
+
+**** Step 1 -- Format dates
+* Convert string into dates:
+gen fill_date = date(datefilled, "MD20Y")
+format fill_date %tdDD/NN/CCYY			/* format newvar %tdDD/NN/CCYY */
+
+**** Step 2 -- Sort the data
+* Sort id and fill_date (filldate)
+sort id fill_date
+
+**** Step 3 -- Generate new variables for calculating the MPR
+* Calculate the summ of the day supplies
+by id: gen ttldsup = sum(dayssupply)
+by id: egen totdaysup = max(ttldsup)
+
+**** Step 4 -- Generate a new variable for the inbetween fill days. 
+* Calculate the inbetween fills days
+by id: gen ttdays = fill_date - fill_date[_n - 1]
+
+**** Step5 -- Generate the index date
+by id: egen index = min(fill_date)
+format index %tdDD/NN/CCYY
+
+**** Step 6 -- Adding days to dates:
+by id: egen tot1 = max(index + dayssupply)  
+by id: egen tot2 = max(fill_date + dayssupply)
+
+**** Step 7 -- Generate the duration
+by id: gen duration = max(tot1, tot2) - index
+
+**** Step 8 -- Calculate the number of fills (total number of fills)
+by id: egen numfill = count(fill_date)
+
+**** Step 9 -- Calculate the number of refills in ascending order (n1 = {1:12})
+by id: gen n1 = _n
+
+**** Step 10 -- Calculating the MPR if the duration is 365
+* If duration is greater than 365,
+by id: gen compdiff = duration - 365 
+by id: gen dsuptrnc = totdaysup - compdiff    /* dsuptrnc = day supplied */
+by id: gen mpr = dsuptrnc/365 
+
+**** Step 11 -- Calculating the MPR if duration is less than 365,
+by id: replace mpr = totdaysup/365 if duration <= 365
+
+**** Step 12 -- Calculate the MPR with a max MPR = 1
+by id: gen mpr_adj = min(mpr, 1.0)
+
+**** Step 13 -- Calculate the MPR with a duration that has a max of 365
+by id: gen duration2 = max(duration, 365)
+
+
+**** Step 14 -- Removing duplicates -- This will change your data. I advise that you save it 
+* prior to removing duplicates because you will need it to calculate the PDC later.
+sort id
+quietly by id: gen dup = cond(_N==1, 0,_n)
+drop if dup > 1
+
+* Summary of MPR and adjusted MPR
+summ mpr mpr_adj
+
+********************************************************************************
+* PDC Calculation 
+********************************************************************************
+* Need to transpose the data
+	* filldate (fill_date) --> wide
+	* daysupply --> wide
+
+**** Step 1 -- Preparing your data to be tranposed from long --> wide
+* Reshaping the fill_date (filldate) and daysupply:
+keep id drug n1 mpr mpr_adj ha1c age fill_date dayssupply
+/*
+Any variable that is not unique needs to be dropped. If you carry it over to the next 
+part of the calculation, you will experience errors with the reshape command.
+*/
+
+**** Step 2: Using the reshape command:
+reshape wide fill_date dayssupply, i(id) j(n1)
+
+**** Step 3: Need to create two new variables, start_st and end_dt used in PDC calculation
+* Create start date and end date
+by id: gen start_dt = fill_date1
+by id: gen end_dt = fill_date1+365
+
+format start_dt end_dt %tdDD/NN/CCYY
+
+********************************************************************************
+* Handling overlapping days - adjusted PDC
+********************************************************************************
+
+**** Step 4: This is for calculating PDC where the refills overlap with the previous one.
+forvalues k = 2/16 {
+	replace fill_date`k' = (fill_date`k' - 1 + dayssupply`k' - 1) if (fill_date`k' < (fill_date`k' - 1 + dayssupply`k' - 1) &  fill_date`k' != .)
+	}
+
+forvalues i = 1/365 {
+	gen day`i' = 0
+		forvalues j = 1/16 {
+			replace day`i' = 1 if fill_date`j' <= start_dt + `i' - 1 & start_dt + `i' - 1 <= fill_date`j' + dayssupply`j' - 1 & fill_date`j' != .
+	}
+	}
+
+**** Step 5: Create a new range of variables for day[i] where i is 1:365. 
+* Days covered - adjusted
+egen vsum_adj = rsum(day1-day365)
+
+**** Step 6: Calculate the PDF for 1 year or 365 days
+gen pdc_adj = vsum_adj / 365
+
+* Overall descriptives
+summ mpr mpr_adj pdc pdc_adj
+
+
+********************************************************************************
+* Proportion adherent -- If you're interested in knowing the prop adherent.
+********************************************************************************
+gen adherent = 0
+	replace adherent = 1 if pdc_adj > 0.80
+
+tab adherent
+
+
+
