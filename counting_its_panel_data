@@ -9,9 +9,9 @@
 
 ***** Declare XTSET panel dataset.
 * Variable list: id event time 
-* id 	= 	subject identifier
-* event 	= 	exposure of interest
-* time 	= 	time interval
+* id      =   subject identifier
+* event   =   exposure of interest
+* time    =   time interval
 
 **** Create the duration variable to capture time after event.
 by id (time), sort: gen byte duration = sum(event==1)
