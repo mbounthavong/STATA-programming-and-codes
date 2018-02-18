@@ -1,0 +1,30 @@
+********************************************************************************
+* Title: 		Counting the number of events in longitudinal data sets
+* Stata ver:	Stata 15 SE
+* Programmer: 	Mark Bounthavong
+* Date: 		18 February 2018
+* Updated: 		
+* Updated by: 	
+********************************************************************************
+
+***** Declare XTSET panel dataset.
+* Variable list: id event time 
+* id 	= 	subject identifier
+* event 	= 	exposure of interest
+* time 	= 	time interval
+
+**** Create the duration variable to capture time after event.
+by id (time), sort: gen byte duration = sum(event==1)
+
+**** Create a variable for the time before the event.
+egen firstevent = min(cond(event == 1, time, .)), by(id)
+
+**** Identify the maxtime.
+summ time
+global maxtime = r(max)
+
+**** Replace missing data with the maxtime + 1.
+replace firstevent = $maxtime + 1 if firstevent == .
+
+**** Create its to capture time before and after event. 
+by id (time), sort: gen byte its = _n - firstevent
