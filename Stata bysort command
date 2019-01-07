@@ -1,0 +1,69 @@
+/******************************************************************************
+Title: 			Using the bysort command to clean panel data
+Programmer: 	Mark Bounthavong
+Date:  			06 January 2019
+Updated:		NA
+Updated by:		NA
+******************************************************************************/
+
+
+
+***** For Windows:
+clear all
+cd "[insert locatio of data]"
+use data1, replace
+
+
+***** For Macs:
+clear all 
+cd "/[insert location of data]"
+use data1, replace
+
+
+***** Look at the data
+describe
+
+
+***** Identify patients with repated death events. 
+bysort id site (month death): gen byte repeat_deaths = sum(death==1)
+drop if repeat_deaths > 1
+
+/****** Alternative methods:
+******** Alternative Method 1:
+by id site (month death), sort: gen byte repeat_deaths = sum(death==1)
+drop if repeat_deaths > 1
+
+******** Alternative Method 2:
+sort id site (month death)
+by id site (month death): gen byte repeat_deaths = sum(death ==1)
+drop if repeat_deaths > 1
+*******/
+
+
+***** Add up all the deaths per month
+bysort month: egen byte total_deaths = total(death)
+
+
+***** Determine the denominator -- using bysort and counter variable
+gen counter = 1
+bysort month: egen byte total_obs = total(counter)
+
+
+***** Drop duplicate months
+bysort month: gen dup = cond(_N==1, 0, _n)
+drop if dup > 1
+
+keep month total_deaths total_obs
+
+
+****** Plot the total number of deaths and total number of observations
+graph twoway (connected total_deaths month, lcol(navy)) ///
+			 (connected total_obs month, lcol(cranberry) ytitle("Number") ///
+			 xtitle("Months") ylab(, nogrid) graphregion(color(white)))
+
+
+***** Estimate the prevalence and plot (per 100 population)
+gen prev = (total_deaths / total_obs ) * 100	
+
+graph twoway connected prev month, ytitle("Prevalence of Death" "per 100 population") ///
+			 xtitle("Months") ylab(, nogrid) graphregion(color(white))
