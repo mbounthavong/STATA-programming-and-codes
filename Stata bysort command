@@ -7,7 +7,11 @@ Updated by:	NA
 Data location:  https://www.dropbox.com/sh/j0pt406va8suma4/AADsZjFIg_E5_zi_T9NbANWJa?dl=0
 *************************************************************************************************/
 
-
+/************************************ INSTRUCTIONS **********************************************
+Download the data from the above link
+Change directory to the location of the data
+Run the code
+*************************************************************************************************/
 
 ***** For Windows:
 clear all
@@ -29,7 +33,7 @@ describe
 bysort id site (month death): gen byte repeat_deaths = sum(death==1)
 drop if repeat_deaths > 1
 
-/****** Alternative methods:
+/******* Alternative methods ********
 ******** Alternative Method 1:
 by id site (month death), sort: gen byte repeat_deaths = sum(death==1)
 drop if repeat_deaths > 1
@@ -38,7 +42,7 @@ drop if repeat_deaths > 1
 sort id site (month death)
 by id site (month death): gen byte repeat_deaths = sum(death ==1)
 drop if repeat_deaths > 1
-*******/
+**************************************/
 
 
 ***** Add up all the deaths per month
