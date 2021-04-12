@@ -1,0 +1,234 @@
+********************************************************************************
+** TITLE:		    Cost as a dependent variable
+** PROGRAMMER:	Mark Bounthavong
+** DATE:		    10 April 2021
+** UPDATED: 	  11 April 2021
+** UPDATED BY:	Mark Bounthavong
+********************************************************************************
+
+
+/********************************************************************************
+Acknowledgements: Many of the codes were from lectures that I took at the 
+UW Advanced Methods Course Series. These methods helped me to better understand 
+the nuances associated with skewed data (e.g., costs and counts). I recreated 
+these codes for Stata as part of a presentation on modeling cost as a dependent 
+variable. 
+********************************************************************************/
+
+/************************************
+Note: We will use the MEPS 2017 data file for this exercise.
+
+Data file location:
+GITHUB link:
+
+************************************/
+
+**** Plot a normal distribution with x = 0 and sd = 1
+graph twoway function y=normalden(x,0,1), range(-5 5) lw(medthick) legend(off)   
+xscale(lw(medthick)) yscale(lw(medthick)) graphregion(color(white)) bgcolor(white) ylabel(, nogrid)
+
+
+***** FOR WINDOWS:
+clear all
+cd "[INSERT FILE LOCATION]"
+use limited_data.csv
+
+
+**** Rename all variables to lower case
+rename *, lower
+
+**** Limit sample data to respondents with high blood pressure
+tab hibpdx, m
+keep if hibpdx == 1
+
+**** Only include respondents who are 18 years and older
+keep if age17x >= 18
+
+
+**** Visual inspection of the data
+histogram totexp17, bin(50) percent normal
+kdensity totexp17
+summarize totexp17, detail
+
+
+*********************************
+** MODEL 1: OLS
+*********************************
+**** MODEL 1: OLS
+reg totexp17 age17x sex racev2x hispanx marry17x povcat17 region17 /* OLS model */ 
+predict yhat /* get the fitted values */
+predict error, resid /* get the residuals */
+graph twoway scatter error yhat /* plot the residuals to the fitted value */
+rvfplot, yline(0) /* alternatively, you can use this command */
+
+summarize yhat, detail
+summarize totexp17 yhat
+
+
+estat szr age17x sex racev2x hispanx marry17x povcat17 region17 /* Szroeter's test for homoskedasticity */
+
+**** GOF tests
+qui reg totexp17 age17x sex racev2x hispanx marry17x povcat17 region17 /* OLS model */ 
+predict xb, xb
+gen mu_ols = xb
+gen res_ols = totexp17 - mu_ols
+
+* Pearson corr
+pwcorr res_ols mu_ols, sig
+
+* Link test
+gen xb2 = xb^2
+reg totexp17 xb xb2
+
+qui reg totexp17 age17x sex racev2x hispanx marry17x povcat17 region17 /* OLS model */  
+linktest
+
+* H-L test
+xtile xbtile = xb, nq(10)
+qui tab xbtile, gen(xbt)
+reg res_ols xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10, nocons
+
+test xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10
+
+drop xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10 xbtile xb xb2 
+
+
+*********************************
+** MODEL 2: Log-OLS
+*********************************
+gen lntptexp = ln(totexp17)
+
+histogram lntptexp, bin(50) percent normal
+summarize lntptexp, detail
+
+**** MODEL 2: Log-OLS
+reg lntptexp age17x sex racev2x hispanx marry17x povcat17 region17
+
+predict lh_yhat, xb
+gen exp_lnyhat = exp(lh_yhat)
+summarize exp_lnyhat, detail
+summarize totexp17 exp_lnyhat
+
+
+* Pearson corr
+gen res_lny = totexp17 - exp_lnyhat
+pwcorr res_lny exp_lnyhat, sig
+
+* Link test
+gen xb2 = lh_yhat^2
+reg lntptexp lh_yhat xb2, robust
+
+* H-L test
+xtile xbtile = lh_yhat, nq(10)
+qui tab xbtile, gen(xbt)
+reg res_lny xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10, nocons robust
+
+test xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10
+
+drop xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10 xbtile xb2 
+
+
+
+*********************************
+** MODEL 3: Log-OLS w/smearing
+*********************************
+* MODEL 3: Log-OLS w/smearing
+reg lntptexp age17x sex racev2x hispanx marry17x povcat17
+
+predict xb, xb
+* Smearing estimator
+gen smr = exp(lntptexp - lh_yhat)
+summarize smr
+
+gen smear = r(mean) 
+gen mu = exp(lh_yhat) * smear
+gen mu_lols = exp(lh_yhat) * smear
+gen res_lols = totexp17 - mu_lols
+summarize totexp17 mu 
+summarize mu, detail
+
+
+* Park test - detect heteroscedasticity in log-scale
+gen res = (lntptexp - xb)^2
+glm res age17x sex racev2x hispanx marry17x povcat17, family(gamma) link(log) robust
+test
+
+* Pearson corr
+pwcorr res_lols mu, sig
+
+* Link test
+gen xb2 = xb^2
+reg lntptexp xb xb2, robust
+
+
+* H-L test
+xtile xbtile = xb, nq(10)
+qui tab xbtile, gen(xbt)
+reg res_lols xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10, nocons robust
+
+test xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10
+
+drop xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10 xbtile xb2
+
+
+*********************************
+** MODEL 4: GLM (gamma)
+*********************************
+glm totexp17 age17x sex racev2x hispanx marry17x povcat17, family(gamma) link(log)
+
+predict glm_1
+summarize glm_1, detail
+
+histogram glm_1, bin(50) percent normal
+
+predict xb, xb
+gen mu_glm = exp(xb)
+gen res_glm = totexp17 - mu_glm
+summarize totexp17 mu_glm 
+
+* Pearson corr
+pwcorr res_glm mu_glm, sig
+
+* Link test
+gen xb2 = xb^2
+reg totexp17 xb xb2, robust
+
+* H-L test
+xtile xbtile = xb, nq(10)
+qui tab xbtile, gen(xbt)
+reg res_glm xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10, nocons robust
+
+test xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10
+
+drop xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10 xbtile xb xb2
+
+
+*********************************
+** MODEL 5: Two-part model
+*********************************
+twopm totexp17 age17x sex racev2x hispanx marry17x povcat17, firstpart(logit) secondpart(glm, family(gamma) link(log))
+
+predict twopm_xb
+summarize twopm_xb, detail
+
+histogram twopm_xb, bin(50) percent normal
+
+gen res_twopm = totexp17 - twopm_xb
+
+summarize totexp17 mu mu_glm twopm_xb
+
+* Pearson corr
+pwcorr res_twopm twopm_xb, sig
+
+* Link test
+gen xb2 = twopm_xb^2
+reg totexp17 twopm_xb xb2, robust
+
+
+xtile xbtile = twopm_xb, nq(10)
+qui tab xbtile, gen(xbt)
+reg res_twopm xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10, nocons robust
+
+test xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10
+
+drop xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10 xbtile
