@@ -143,11 +143,10 @@ gen smr = exp(lntptexp - lh_yhat)
 summarize smr
 
 gen smear = r(mean) 
-gen mu = exp(lh_yhat) * smear
 gen mu_lols = exp(lh_yhat) * smear
 gen res_lols = totexp17 - mu_lols
 summarize totexp17 mu 
-summarize mu, detail
+summarize mu_lols, detail
 
 
 * Park test - detect heteroscedasticity in log-scale
