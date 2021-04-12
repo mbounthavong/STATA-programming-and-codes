@@ -15,13 +15,15 @@ these codes for Stata as part of a presentation on modeling cost as a dependent
 variable. 
 ********************************************************************************/
 
-/************************************
+/*********************************************************************************************************************************************
 Note: We will use the MEPS 2017 data file for this exercise.
 
-Data file location:
-GITHUB link: limited_data.dta
+INSTRUCTIONS:
+Download limited_data.dta file to your computer. 
 
-************************************/
+GITHUB link: 
+https://github.com/mbounthavong/STATA-programming-and-codes/blob/66f751a1167564252caa18bb024d08bf8dd24c8a/limited_data.dta
+*********************************************************************************************************************************************/
 
 **** Plot a normal distribution with x = 0 and sd = 1
 graph twoway function y=normalden(x,0,1), range(-5 5) lw(medthick) legend(off)   
@@ -31,7 +33,7 @@ xscale(lw(medthick)) yscale(lw(medthick)) graphregion(color(white)) bgcolor(whit
 ***** FOR WINDOWS:
 clear all
 cd "[INSERT FILE LOCATION]"
-use limited_data.csv
+use limited_data.dta
 
 
 **** Rename all variables to lower case
