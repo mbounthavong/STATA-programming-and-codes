@@ -1,9 +1,9 @@
 ********************************************************************************
-** TITLE:		    Cost as a dependent variable
-** PROGRAMMER:	Mark Bounthavong
-** DATE:		    10 April 2021
-** UPDATED: 	  11 April 2021
-** UPDATED BY:	Mark Bounthavong
+** TITLE:		      Cost as a dependent variable
+** PROGRAMMER:	  Mark Bounthavong
+** DATE:		      10 April 2021
+** UPDATED: 	    11 April 2021
+** UPDATED BY:	  Mark Bounthavong
 ********************************************************************************
 
 
@@ -19,7 +19,7 @@ variable.
 Note: We will use the MEPS 2017 data file for this exercise.
 
 Data file location:
-GITHUB link:
+GITHUB link: limited_data.dta
 
 ************************************/
 
