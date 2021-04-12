@@ -22,7 +22,7 @@ INSTRUCTIONS:
 Download limited_data.dta file to your computer. 
 
 GITHUB link: 
-https://github.com/mbounthavong/STATA-programming-and-codes/blob/66f751a1167564252caa18bb024d08bf8dd24c8a/limited_data.dta
+https://github.com/mbounthavong/STATA-programming-and-codes/blob/b957580c98bd244edfc7d31588a6d514e8a58008/limited_data.dta
 *********************************************************************************************************************************************/
 
 **** Plot a normal distribution with x = 0 and sd = 1
