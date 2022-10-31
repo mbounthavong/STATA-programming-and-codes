@@ -1,0 +1,164 @@
+---
+title: "Line chart with 95% confidence interval in Stata"
+author: "Mark Bounthavong"
+date: "10/29/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, echo = FALSE, message = FALSE}
+library("Statamarkdown")
+library("tidyverse")
+library("knitr")
+```
+
+## Introduction
+[Stata](https://www.stata.com/company/) is a statistical software the is used to perform statistical analysis. It is one of my favorite statistical software, and I use it for many of my projects. Stata also has a powerful graphic editing tool that allows for a full range of customization. However, I like to keep all of these in the code so that I can have a convenient template to re-create my custom figures. 
+
+One figure that I generate often in Stata is the connected line plot, whch uses the `connected` command. Here is an example of what that looks like. Notice how each point is connected by a line. Each point represents the average price for each category of `rep78`. However, if I wanted to add the 95% confidence interval error bars, I will need to do more coding. 
+
+```{stata, echo = FALSE, results = "hide"}
+sysuse auto
+egen mean_price = mean(price), by(rep78)
+sort rep78
+graph twoway connected mean_price rep78
+graph export "mean_price.png", replace
+```
+
+```{r, echo = FALSE}
+knitr::include_graphics("mean_price.png")
+```
+
+## Objective
+To add 95% CI to the Stata `connected` line plot, we will use the [Medical Expenditure Panel Survey (MEPS)](https://www.meps.ahrq.gov/mepsweb/) from the Agency for Healthcare Research and Quality (AHRQ). I have already downloaded and cleaned the data from this tutorial, which is available on my [Dropbox folder](https://www.dropbox.com/sh/ophzbm5u1hc5j3x/AAAKpxAmgUtWm5fc87bzjO-la?dl=0). Make sure to download the data and save it on the folder where you are going to perform this exercise. 
+
+## Motivating example
+In this tutorial, we are interested in plotting the average total healthcare expenditures along with the 95% CI of responders from 2008 to 2019. 
+
+### Step 1: Load the data into Stata. 
+First, we will need to load the data into Stata. The data we will use for this tutorial is `adjusted_combined_data_post.dta`. 
+
+```{stata, collectcode=TRUE}
+// Use the data from the following Dropbox folder:
+* For Windows:
+clear all 
+cd "C:\Users\mbounthavong\Dropbox\Marks blog\Stata in R Markdown"
+use adjusted_combined_data_post.dta
+```
+
+### Step 2: Visualize the data
+Let's look at the number of subjects we have across the years. There are twelve years of data from 2008 - 2019. 
+
+```{stata, echo = FALSE, cleanlog = FALSE}
+tab year, m
+```
+
+
+### Step 3: Two-way line plot
+We can create a two-way line plot using the `connected` command. We'll plot he average total healthcare expenditure again the years (2008-2019). 
+
+We estimate the mean total healthcare expenditure using the `egen` command by year. Then we use the `graph twoway connected` code to generate the two-way line plot. Before you plot the figure, make sure that you sort by year. Otherwise, you will be a spaghetti-like plot where Stata will try to draw the line across the years if they are not sorted or in order. 
+
+```{stata, echo = FALSE, cleanlog = FALSE}
+egen mean_expenditure = mean(totexp), by(year)
+sort year
+graph twoway connected mean_expenditure year, ///
+      title("Total healthcare expenditures (2008-2019)") ///
+      ytitle("Average total healthcare expenditure ($)") ///
+      xtitle("Time (year)") ///
+      xlab(2008(1)2019) ///
+      ylab(, labsize(small) nogrid) ///
+      graphregion(color(white)) ///
+      bgcolor(white)
+graph export "connected1.png", replace
+```
+
+```{r, echo = FALSE}
+knitr::include_graphics("connected1.png")
+```
+
+### Step 4: Estimate the 95% CI
+So far, our plot only illustrates the average total healthcare expenditure across time. But we want to plot the average total healthcare expenditures with 95% confidence intervals (CI). The 95% CI is important because it will give us some visual indicator of the variance surrounding each value. 
+
+We will need to estimate the 95% CI for each value. We can get the 95% CI for each value by using the `ci means` command. 
+```{stata, echo = FALSE, cleanlog = FALSE}
+egen mean_expenditure = mean(totexp), by(year)
+ci means mean_expenditure
+```
+
+This gives us the 95% CI for the pooled total healthcare expenditure. If we want to get the 95% CI for each year, we need to specify the year. We use the `forvalues` loop to cycle through the years and estimate the mean, standard error, and 95% CI for the total healthcare expenditure at each year (2008-2019). 
+
+```{stata, echo = FALSE, cleanlog = FALSE}
+forvalues i = 2008/2019 {
+	ci mean totexp if year == `i'
+  }
+```
+
+### Step 5: Generate the high and low values of the 95% CI
+We start by adding two new variables: `high` and `low`, which are the high and low ends of the 95% CI. Then we estimate the 95% CI for the total healthcare expenditure at each year. The data are stored in Stata and can be retrieved using the `r()` syntax. For example, if I want the lower bound of the 95% CI in 2009, then I write `replace low = r(lb) if year == 2009`. 
+
+To make this process more efficient, we use the `forvalues` loop for each year (2008-2019). 
+
+```{stata, echo = FALSE, cleanlog = FALSE}
+// Generate the upper and low bound of the 95% CI variable
+gen high = .
+gen low = .
+
+// Loop commmand
+forvalues i = 2008/2019 {
+	ci mean totexp if year == `i'
+	replace high = r(ub) if year == `i'
+	replace low = r(lb) if year == `i'
+}
+```
+
+### Step 6: Plot the 95% CI
+Now, that we have the 95% CI for total healthcare expenditure at each year, we can plot these using the `rcap` command. This allows us to create error bars using the variables we generated for the upper (`high` and lower `low` bounds of the 95% CI. 
+
+```{stata, echo = FALSE, changelog = FALSE}
+// Generate the average total healthcare expenditure by year
+egen mean_expenditure = mean(totexp), by(year)
+
+
+// Generate the upper and low bound of the 95% CI variable
+gen high = .
+gen low = .
+
+// Loop commmand
+forvalues i = 2008/2019 {
+	ci mean totexp if year == `i'
+	replace high = r(ub) if year == `i'
+	replace low = r(lb) if year == `i'
+}
+
+// Sort by year and generate the two-way line plot
+sort year
+graph twoway (rcap low high year) ///
+             (connected mean_expenditure year, color(navy) msize(small) ///
+                        title("Total healthcare expenditures (2008-2019)") ///
+                        ytitle("Average total healthcare expenditure ($)") ///
+                        xtitle("Time (year)") ///
+                        xlab(2008(1)2019, labsize(vsmall)) ///
+                        ylab(, labsize(vsmall) nogrid) ///
+                        graphregion(color(white)) ///
+                        bgcolor(white) ///
+						color(navy))
+graph export "connected_errorbars.png", replace
+```
+
+```{r, echo = FALSE}
+knitr::include_graphics("connected_errorbars.png")
+```
+
+### Conclusions
+Adding the 95% CI allows the reader to visualize the variance surrounding the mean total healthcare expenditure per year. This added dimension to the two-way line plot is useful for publication-quality images. However, these series of commands can be used for any continuous data type. I w0uld recommend using this for data that is plotted along time on the x-axis. 
+
+
+### Acknowledgement
+I've learned how to code in Stata through various resources online. Particularly, [Stats Exchange](https://stats.stackexchange.com/) and [Stata Forum](https://www.statalist.org/forums/forum/general-stata-discussion/general/1560200-adding-confidence-intervals-to-a-two-way-line-graph). 
+
+This is a work in progress, and I will likely update this as I learn more efficient methods to produce 95% CI around average values. 
