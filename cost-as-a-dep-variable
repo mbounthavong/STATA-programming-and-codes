@@ -17,7 +17,6 @@ Note: We will use the MEPS 2017 data file for this exercise.
 You can import this CSV file from GitHub into Stata using the following command:
 import delimited "https://raw.githubusercontent.com/mbounthavong/STATA-programming-and-codes/master/limited_data.csv"
 
-************************************/
 
 **** Plot a normal distribution with x = 0 and sd = 1
 graph twoway function y=normalden(x,0,1), range(-5 5) lw(medthick) legend(off)   xscale(lw(medthick)) yscale(lw(medthick)) graphregion(color(white)) bgcolor(white) ylabel(, nogrid)
@@ -153,11 +152,10 @@ gen smr = exp(lntptexp - lh_yhat)
 summarize smr
 
 gen smear = r(mean) 
-gen mu = exp(lh_yhat) * smear
 gen mu_lols = exp(lh_yhat) * smear
 gen res_lols = totexp17 - mu_lols
 summarize totexp17 mu 
-summarize mu, detail
+summarize mu_lols, detail
 
 
 * Park test - detect heteroscedasticity in log-scale
