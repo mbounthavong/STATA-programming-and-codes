@@ -1,43 +1,49 @@
 ********************************************************************************
-** TITLE:        Cost as a dependent variable
-** PROGRAMMER:   Mark Bounthavong
-** DATE:         10 April 2021
-** UPDATED:      11 April 2021
-** UPDATED BY:   Mark Bounthavong
+** TITLE:		Cost as a dependent variable
+** PROGRAMMER:	Mark Bounthavong
+** DATE:		10 April 2021
+** VERSION: 	1.1
+** UPDATED: 	22 April 2023
+** UPDATED BY:	Mark Bounthavong
 ********************************************************************************
 
-
 /********************************************************************************
-Acknowledgements: Many of the codes were from lectures that I took at the 
-UW Advanced Methods Course Series. These methods helped me to better understand 
-the nuances associated with skewed data (e.g., costs and counts). I recreated 
-these codes for Stata as part of a presentation on modeling cost as a dependent 
-variable. 
+Acknowledgements: Many of the codes were from lectures that I took at the UW Advanced Methods Course Series. These methods helped me to better understand the nuances associated with skewed data (e.g., costs and counts). I recreated these codes for Stata as part of a presentation on modeling cost as a dependent variable. 
 ********************************************************************************/
 
-/*********************************************************************************************************************************************
+/************************************
 Note: We will use the MEPS 2017 data file for this exercise.
 
-INSTRUCTIONS:
-Download limited_data.dta file to your computer. 
+You can import this CSV file from GitHub into Stata using the following command:
+import delimited "https://raw.githubusercontent.com/mbounthavong/STATA-programming-and-codes/master/limited_data.csv"
 
-GITHUB link: 
-https://github.com/mbounthavong/STATA-programming-and-codes/blob/66f751a1167564252caa18bb024d08bf8dd24c8a/limited_data.dta
-*********************************************************************************************************************************************/
+************************************/
 
 **** Plot a normal distribution with x = 0 and sd = 1
-graph twoway function y=normalden(x,0,1), range(-5 5) lw(medthick) legend(off)   
-xscale(lw(medthick)) yscale(lw(medthick)) graphregion(color(white)) bgcolor(white) ylabel(, nogrid)
+graph twoway function y=normalden(x,0,1), range(-5 5) lw(medthick) legend(off)   xscale(lw(medthick)) yscale(lw(medthick)) graphregion(color(white)) bgcolor(white) ylabel(, nogrid)
 
 
+/******************************************************************************
+Note 22 April 2023:
+Previous code had the user download and load the file. Since the syntax is diffrent between WINDOWS and MAC users, I had provided code for both. However, it is much easier to import the CSV file because the syntax is the same for WINDOWS and MAC users. In this update, I added the code to import the CSV using. 
+
+******************************************************************************/
+
+/*************************** THIS IS OLD CODE **********************************
 ***** FOR WINDOWS:
 clear all
-cd "[INSERT FILE LOCATION]"
-use limited_data.dta
-
+cd "C:\Users\mboun\Dropbox\VA-related work\HERC\Cyberseminar - Cost as a dependent variable\Data"
+use H201.dta
+keep dupersid totexp17 age17x sex racev2x hispanx marry17x povcat17 region17 hibpdx
 
 **** Rename all variables to lower case
 rename *, lower
+*******************************************************************************/
+
+***** FOR WINDOWS or MAC:
+clear all
+import delimited "https://raw.githubusercontent.com/mbounthavong/STATA-programming-and-codes/master/limited_data.csv"
+
 
 **** Limit sample data to respondents with high blood pressure
 tab hibpdx, m
@@ -50,7 +56,10 @@ keep if age17x >= 18
 **** Visual inspection of the data
 histogram totexp17, bin(50) percent normal
 kdensity totexp17
+
+**** Skewness
 summarize totexp17, detail
+sktest totexp17 /* test for skewness */
 
 
 *********************************
@@ -65,7 +74,7 @@ rvfplot, yline(0) /* alternatively, you can use this command */
 
 summarize yhat, detail
 summarize totexp17 yhat
-
+histogram yhat, bin(50) percent normal
 
 estat szr age17x sex racev2x hispanx marry17x povcat17 region17 /* Szroeter's test for homoskedasticity */
 
@@ -120,6 +129,7 @@ pwcorr res_lny exp_lnyhat, sig
 gen xb2 = lh_yhat^2
 reg lntptexp lh_yhat xb2, robust
 
+
 * H-L test
 xtile xbtile = lh_yhat, nq(10)
 qui tab xbtile, gen(xbt)
@@ -172,7 +182,6 @@ test xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10
 
 drop xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10 xbtile xb2
 
-
 *********************************
 ** MODEL 4: GLM (gamma)
 *********************************
@@ -205,6 +214,7 @@ test xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10
 drop xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10 xbtile xb xb2
 
 
+
 *********************************
 ** MODEL 5: Two-part model
 *********************************
@@ -234,3 +244,6 @@ reg res_twopm xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10, nocons robust
 test xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10
 
 drop xbt1 xbt2 xbt3 xbt4 xbt5 xbt6 xbt7 xbt8 xbt9 xbt10 xbtile
+
+
+
