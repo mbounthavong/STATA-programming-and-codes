@@ -50,6 +50,9 @@ clear all
 import delimited "https://raw.githubusercontent.com/mbounthavong/STATA-programming-and-codes/master/limited_data.csv"
 /*******************************************************************************/
 
+**** Rename all variables to lower case
+rename *, lower
+
 **** Limit sample data to respondents with high blood pressure
 tab hibpdx, m
 keep if hibpdx == 1
