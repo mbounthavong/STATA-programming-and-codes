@@ -1,10 +1,10 @@
 ********************************************************************************
-** TITLE:       Cost as a dependent variable
-** PROGRAMMER:  Mark Bounthavong
-** DATE:        10 April 2021
-** VERSION:     1.1
-** UPDATED:     22 April 2023
-** UPDATED BY:  Mark Bounthavong
+** TITLE:		Cost as a dependent variable
+** PROGRAMMER:	Mark Bounthavong
+** DATE:		10 April 2021
+** VERSION: 	1.2
+** UPDATED: 	29 April 2023
+** UPDATED BY:	Mark Bounthavong
 ********************************************************************************
 
 /********************************************************************************
@@ -24,6 +24,8 @@ Notes 22 April 2023:
 - You can import this CSV file from GitHub into Stata using the following command:
 import delimited "https://raw.githubusercontent.com/mbounthavong/STATA-programming-and-codes/master/limited_data.csv"
 
+Notes 29 April 2023:
+The variables are in string. I needed to add a data cleaning section to clean the data for analysis.
 
 ******************************************************************************/
 
@@ -50,17 +52,79 @@ clear all
 import delimited "https://raw.githubusercontent.com/mbounthavong/STATA-programming-and-codes/master/limited_data.csv"
 /*******************************************************************************/
 
-**** Rename all variables to lower case
-rename *, lower
 
-**** Limit sample data to respondents with high blood pressure
-tab hibpdx, m
-keep if hibpdx == 1
 
 **** Only include respondents who are 18 years and older
 keep if age17x >= 18
 
+**** Clean data
+gen female = .
+	replace female = 0 if sex == "1 MALE"
+	replace female = 1 if sex == "2 FEMALE"
+label define female_lbl 0 "Male" 1 "Fenale"
+label values female female_lbl
+tab female, m
 
+gen race = .
+	replace race = 0 if racev2x == "1 WHITE - NO OTHER RACE REPORTED"
+	replace race = 1 if racev2x == "2 BLACK - NO OTHER RACE REPORTED"
+	replace race = 2 if racev2x == "3 AMER INDIAN/ALASKA NATIVE-NO OTHER RACE"
+	replace race = 3 if racev2x == "4 ASIAN INDIAN - NO OTHER RACE REPORTED"
+	replace race = 3 if racev2x == "5 CHINESE - NO OTHER RACE REPORTED"
+	replace race = 3 if racev2x == "6 FILIPINO - NO OTHER RACE REPORTED"
+	replace race = 3 if racev2x == "10 OTH ASIAN/NATV HAWAIIAN/PACFC ISL-NO OTH"
+	replace race = 4 if racev2x == "12 MULTIPLE RACES REPORTED"
+label define race_lbl 0 "White" 1 "Black" 2 "American Indian/Alaska Native" 3 "Asian" 4 "Multiple races reported"
+label values race race_lbl
+tab race, m
+
+gen hispanic = .
+	replace hispanic = 0 if hispanx == "2 NOT HISPANIC"
+	replace hispanic = 1 if hispanx == "1 HISPANIC"
+tab hispanic, m
+
+gen marital_status = .
+	replace marital_status = 0 if marry17x == "5 NEVER MARRIED"
+	replace marital_status = 1 if marry17x == "1 MARRIED"
+	replace marital_status = 2 if marry17x == "2 WIDOWED"
+	replace marital_status = 3 if marry17x == "3 DIVORCED"
+	replace marital_status = 4 if marry17x == "4 SEPARATED"
+	replace marital_status = 5 if marry17x == "-7 REFUSED"
+	replace marital_status = 5 if marry17x == "-8 DK"
+label define marital_lbl 0 "Never married" 1 "Married" 2 "Widowed" 3 "Divorced" 4 "Separated" 5 "Unknown/Refused"
+label values marital_status marital_lbl
+tab marital_status, m
+
+gen poverty_status = .
+	replace poverty_status = 0 if povcat17 == "1 POOR/NEGATIVE"
+	replace poverty_status = 1 if povcat17 == "2 NEAR POOR"
+	replace poverty_status = 2 if povcat17 == "3 LOW INCOME"
+	replace poverty_status = 3 if povcat17 == "4 MIDDLE INCOME"
+	replace poverty_status = 4 if povcat17 == "5 HIGH INCOME"
+label define poverty_lbl 0 "Poor" 1 "Near poor" 2 "Low income" 3 "Middle income" 4 "High income"
+label values poverty_status poverty_lbl
+tab poverty_status, m
+
+gen region = .
+	replace region = 0 if region17 == "1 NORTHEAST"
+	replace region = 1 if region17 == "2 MIDWEST"
+	replace region = 2 if region17 == "3 SOUTH"
+	replace region = 3 if region17 == "4 WEST"
+label define region_lbl 0 "Northeast" 1 "Midwest" 2 "South" 3 "West"
+label values region region_lbl
+tab region, m
+	
+// rename variables
+drop region17 sex racev2x hispanx marry17x povcat17
+
+rename region region17
+rename female sex
+rename race racev2x
+rename hispanic hispanx
+rename marital_status marry17x
+rename poverty_status povcat17
+	
+	
 **** Visual inspection of the data
 histogram totexp17, bin(50) percent normal
 kdensity totexp17
