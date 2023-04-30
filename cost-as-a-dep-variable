@@ -12,10 +12,13 @@ Acknowledgements: Many of the codes were from lectures that I took at the UW Adv
 ********************************************************************************/
 
 /******************************************************************************
------------------
+---------------------------
 Developer notes
------------------
+---------------------------
+
+---------------------------
 Notes 22 April 2023:
+---------------------------
 
 - We will use the MEPS 2017 data file for this exercise.
 
@@ -24,8 +27,14 @@ Notes 22 April 2023:
 - You can import this CSV file from GitHub into Stata using the following command:
 import delimited "https://raw.githubusercontent.com/mbounthavong/STATA-programming-and-codes/master/limited_data.csv"
 
+---------------------------
 Notes 29 April 2023:
+---------------------------
 The variables are in string. I needed to add a data cleaning section to clean the data for analysis.
+
+I also experted the "clean" data file as a CSV using the following commands:
+outsheet dupersid age17x totexp17 sex racev2x hispanx marry17x povcat17 region17 using limited_data2.csv, comma nolabel
+
 
 ******************************************************************************/
 
@@ -34,28 +43,33 @@ graph twoway function y=normalden(x,0,1), range(-5 5) lw(medthick) legend(off)  
 
 
 /*************************** THIS IS OLD CODE **********************************
+Note: For those users who wish to download the data, you will need to make sure that you include the correct file path.
+
 ***** FOR WINDOWS:
 clear all
-cd "C:\Users\mboun\Dropbox\VA-related work\HERC\Cyberseminar - Cost as a dependent variable\Data"
+cd "C:\Users\mbounthavong\Dropbox\VA-related work\HERC\Cyberseminar - Cost as a dependent variable\Data"
 use H201.dta
 keep dupersid totexp17 age17x sex racev2x hispanx marry17x povcat17 region17 hibpdx
 
-**** Rename all variables to lower case
+keep if hibpdx == 1 /* You will need to restrict the sample to those with HTN for this exercise */
+
+**** Rename all variables to lower case (may not be necessary if the column names are already lowercase)
 rename *, lower
 *******************************************************************************/
 
 
 
-/*************************** THIS IS UPDATED CODE **********************************/
+/********* THIS IS UPDATED CODE (subjects with hypertension only) **************/
 ***** FOR WINDOWS or MAC:
 clear all
-import delimited "https://raw.githubusercontent.com/mbounthavong/STATA-programming-and-codes/master/limited_data.csv"
+import delimited "https://raw.githubusercontent.com/mbounthavong/Cost-as-a-dependent-variable/main/Data/limited_data.csv"
 /*******************************************************************************/
 
 
 
 **** Only include respondents who are 18 years and older
 keep if age17x >= 18
+
 
 **** Clean data
 gen female = .
