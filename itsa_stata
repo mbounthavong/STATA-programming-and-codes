@@ -4,7 +4,7 @@
 ** Date: 			29 October 2023
 ** Updated:			NA
 ** Updated by: 		NA
-** Notes: 			Hosted on Github
+** Notes: 			Hosted on Github: https://raw.githubusercontent.com/mbounthavong/STATA-programming-and-codes/master/itsa_stata
 ********************************************************************************
 
 
@@ -37,6 +37,13 @@ clear all
 cd "C:\Users\carn3_a5ada\Dropbox\STATA references\Mitchels book - Visualing in Stata\ivrm2"
 use sleep_cat3pw.dta, replace
 
+// For Windows users 2:
+clear all
+cd "C:\Users\mbounthavong\Dropbox\STATA references\Mitchels book - Visualing in Stata\ivrm2"
+use sleep_cat3pw.dta, replace
+
+
+
 
 // Inspect data
 describe
@@ -46,9 +53,107 @@ list in 1/10 /* list the first 10 rows */
 tab group, m /* Number of groups; there should be three groups */ 
 
 
-**********************************
-// METHOD 1: SPLINES
-**********************************
+
+
+***********************************************
+// METHOD 1 - SPLINES FOR SINGLE-GROUP ITSA
+***********************************************
+// Keep only the control group
+keep if group == 1
+
+// Use mkspline to create knots. We will create a knot at obsday = 31 (index date)
+/* The marginal option => estimate the change in slope b/w knot2 v. knot1 */
+mkspline knot1 31 knot2 = obsday, marginal 
+
+
+// Create a variable to separate the treatment periods.
+gen period = .
+	replace period = 0 if obsday < 31 /* Baseline phase */ 
+	replace period = 1 if obsday >= 31 & !missing(obsday) /* Treatment phase */
+tab period, m 
+
+// Linear mixed effects model for the single-group ITSA
+xtmixed sleep i.period c.knot1 c.knot2 || id: period knot1 knot2, covariance(unstructured)
+predict linear_spline
+
+
+*** Plot single-group ITSA
+graph twoway (lfit linear_spline obsday if group == 1 & period == 0, lcol(navy)) ///
+			 (lfit linear_spline obsday if group == 1 & period == 1, lcol(navy) ///
+			 xline(31) ///
+			 legend(order(1 "Before intervention" 2 "After intervention")))
+			 
+margins, dydx(knot1) /* Slope before the intervention */
+margins, dydx(period) /* Level change immediately after the intervention */
+margins, dydx(knot2) /* Diff in slopes after and before the intervention */
+
+/* Slope after the intervention */
+margins, expression(_b[knot1] + _b[knot2]) /* Method 1 */
+lincom knot1+knot2 /* Method 2 */
+
+
+
+
+
+***********************************************
+// METHOD 1 - SPLINES FOR SINGLE-GROUP ITSA
+***********************************************
+// RELOAD DATA
+// For MAC users:
+clear all
+cd "/Users/mbounthavong/Library/CloudStorage/Dropbox/STATA references/Mitchels book - Visualing in Stata/ivrm2"
+use sleep_cat3pw.dta, replace
+
+// For Windows users:
+clear all
+cd "C:\Users\carn3_a5ada\Dropbox\STATA references\Mitchels book - Visualing in Stata\ivrm2"
+use sleep_cat3pw.dta, replace
+
+// For Windows users 2:
+clear all
+cd "C:\Users\mbounthavong\Dropbox\STATA references\Mitchels book - Visualing in Stata\ivrm2"
+use sleep_cat3pw.dta, replace
+
+
+// Keep only the control group
+keep if group == 1
+
+
+// Create a variable to separate the treatment periods.
+gen period = .
+	replace period = 0 if obsday < 31 /* Baseline phase */ 
+	replace period = 1 if obsday >= 31 & !missing(obsday) /* Treatment phase */
+tab period, m 
+
+// Linear mixed effects model for the single-group ITSA
+xtmixed sleep i.period c.obsday i.period#c.obsday || id: period obsday i.period#c.obsday, covariance(unstructured)
+predict linear_int
+
+
+*** Plot single-group ITSA
+graph twoway (lfit linear_int obsday if group == 1 & period == 0, lcol(navy)) ///
+			 (lfit linear_int obsday if group == 1 & period == 1, lcol(navy) ///
+			 xline(31) ///
+			 legend(order(1 "Before intervention" 2 "After intervention")))
+
+
+margins if obsday < 31, dydx(obsday) /* Slope before the intervention */
+margins, dydx(period) at(obsday = 31) /* Estimate the level change at obsday == 31 */
+
+margins, dydx(obsday) over(period) pwcompare(effects) /* Diff between slopes after and before the intervention */
+
+/* Slope after the intervention */
+margins, expression(_b[obsday] + _b[1.period#c.obsday]) /* Method 1 */
+lincom obsday + 1.period#c.obsday /* Method 2 */
+
+
+margins, dydx(obsday) over(period) /* Est slopes before and after intervention */
+
+
+
+**********************************************
+// METHOD 1: MULTIPLE GROUP ITSA - SPLINES
+**********************************************
 
 // Use mkspline to create knots. We will create a knot at obsday = 31 (index date)
 /* The marginal option => estimate the change in slope b/w knot2 v. knot1 */
@@ -127,9 +232,9 @@ margins, dydx(knot2) over(group) pwcompare(effects)
 
 
 
-**********************************
-// METHOD 2: TRIPLE INTERACTIONS
-**********************************
+*********************************************************
+// METHOD 2: MULTIPLE GROUP ITSA - TRIPLE INTERACTIONS
+*********************************************************
 
 // For MAC users:
 clear all
