@@ -1,7 +1,7 @@
 # STATA-programming-and-codes
 Archives of my STATA programs and codes
 
-Updated on 30 April 2023
+Updated on 31 October 2023
 
 
 For the `Cost As A Dependent Variable` data and Stata do file, I have created a separate repository. 
